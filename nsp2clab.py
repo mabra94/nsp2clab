@@ -6,6 +6,9 @@ import json
 import sys
 import yaml
 import argparse, getpass
+# Silence annoying warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def get_username(prompt="Enter your username: "):
     """
@@ -66,6 +69,12 @@ def getToken(nsp_server, username, password, proxies):
     # could do something with refresh_token and expires_in values if
     # this will end up being used for a longer-running process but in
     # this case that is unnecessary
+
+    if token.status_code == 200:
+        print("Succesfully retrieved token.")
+    else:
+        print("Error during authentication token retrieval.")
+
     return token.json()
 
 
@@ -132,6 +141,11 @@ def retrieveNspL2IetfTopo(nsp_server, proxies, headers):
         proxies=proxies,
     )
 
+    if l2topo.status_code == 200:
+        print("Succesfully retrieved L2 Topology from NSP.")
+    else:
+        print("Error during L2 Topo retrieval.")
+
     return l2topo.json()
 
 def generate_topology(json_data):
@@ -169,10 +183,6 @@ def main(server, username, password, output, proxy):
     :param str output: The output file path for the generated clab topo file.
     :param str proxy: The proxy to use for requests to the NSP.
     """
-    # Silence annoying warnings
-    from urllib3 import exceptions, disable_warnings        # noqa: E501 pylint: disable=import-outside-toplevel
-    disable_warnings(exceptions.InsecureRequestWarning)
-
     proxies = {}
 
     if proxy:
@@ -213,7 +223,7 @@ def main(server, username, password, output, proxy):
     }
 
     l2topo = retrieveNspL2IetfTopo(
-        os.environ["NSP_SERVER"],
+        server,
         proxies,
         headers
     )
@@ -230,7 +240,8 @@ def main(server, username, password, output, proxy):
     with open(output, 'w') as file:
         yaml.dump(dict(topology), file)
 
-    #print(yaml.dump(dict(topology), default_flow_style=False))
+    print(f"Topology file saved to {output}")
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Generate a topology file from a NSPs IETF L2 Topology compliant topology information')
